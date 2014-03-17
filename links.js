@@ -1,12 +1,15 @@
 // Create and find links
 var _      = require('underscore'),
 	html   = require('./html'),
-	titles = require('./titles');
+	titles = require('./titles'),
+	externalLinkCount;
 
 exports.exports = { // exported all the way out
 	redlinkClass: 'redlink',
 	goodlinkClass: '',
 	externalClass: 'external',
+	plainExternalClass: 'plain-external',
+	internalExternalClass: 'internal-external',
 	internalClass: ''
 };
 
@@ -41,11 +44,10 @@ function link(match, target, text) {
 	var props = findLink(target);
 	return html.createTag('a', {
 		href: props.target,
-		'class': (
-			(props.external ? exports.exports.externalClass : exports.exports.internalClass) +
-			' ' +
-			(props.exists ? exports.exports.goodlinkClass : exports.exports.redlinkClass)
-		).trim()
+		'class': html.classes([
+			props.external ? exports.exports.internalExternalClass : exports.exports.internalClass,
+			props.exists ? exports.exports.goodlinkClass : exports.exports.redlinkClass
+		])
 	}, (text ? text.length == 1 ? titles.pipetrick(target) : text.slice(1) : target).trim());
 }
 exports.link = link;
@@ -87,14 +89,45 @@ function findLink(target, opts) {
 exports.findLink = findLink;
 
 
+function externalLink(match, target, text) {
+	return html.createTag('a', {
+		href: target,
+		'class': exports.exports.externalClass
+	}, text || ('[' + (++externalLinkCount) + ']'));
+}
+
+function plainExternalLink(match, url) {
+	return match.slice(0, match.indexOf(url)) + html.createTag('a', { // keep weird leading space
+		href: url,
+		'class': html.classes([exports.exports.externalClass, exports.exports.plainExternalClass])
+	}, url);
+}
+
+
 var linkRegex = new RegExp(
-	'\\[\\[' + // open
-	'([^\\[\\]{}<>\\|]+)' + // not bad link targets - containing brackets, braces, <>, or pipe
-	'(\\|[^\\[\\]{}\\|]*)?' + // optional acceptable link text - start with pipe; not brackets, braces, pipe; possible empty text
-	'\\]\\]' // close
-	, 'g');
+		'\\[\\[' + // open
+		'([^\\[\\]{}<>\\|]+)' + // not bad link targets - containing brackets, braces, <>, or pipe
+		'(\\|[^\\[\\]{}\\|]*)?' + // optional acceptable link text - start with pipe; not brackets, braces, pipe; possible empty text
+		'\\]\\]', // close
+	'g'), externalLinkRegex = new RegExp(
+		'\\[' + // open
+		'([a-z]+\\:' + // protocol
+		'[^\\s\\]]+)' + // url
+		'\\s*' + // whitespace to separate text
+		'([^\\]]*)' + // link text
+		'\\]', // close
+	'g'), plainExternalLinkRegex = new RegExp(
+		// lifted from http://stackoverflow.com/questions/11863847/regex-to-match-urls-but-not-urls-in-hyperlinks
+		'(?:^|[^"\'])' + // if it is at the beginning, or does not come after a quote
+		'(' + // start capturing url
+			'(ftp|http|https|file):\\/\\/' + // protocol
+			'[\\S]+' + // non-whitespace url
+			'(\\b|$)' + // end of url - word or end of string
+		')', // finish capture
+	'gi');
 
 function replaceLinks(text) {
-	return text.replace(linkRegex, link);
+	externalLinkCount = 0;
+	return text.replace(linkRegex, link).replace(externalLinkRegex, externalLink).replace(plainExternalLinkRegex, plainExternalLink);
 }
 exports.replaceLinks = replaceLinks;

@@ -17,7 +17,7 @@ module.exports = exports = function(text, opts) { // setting exports because it 
 
 exports.samples = [
 	"== Talk Page ==\nmain\n:my ''reply'' with a [[link]] ~~~~",
-	'[[/|homepage]] and [http://google.com Google]',
+	'[[/|homepage]] and [http://google.com Google] and http://example.com/',
 	'<div class="class">stuff</div>',
 	'<nowiki allow="sign">[[link target|title]]\nsign: ~~~~\nescape markup: <nowiki>markup</nowiki></nowiki>',
 	'{|\n| 1@1 || 1@2\n|-\n| 2@1 || 2@2\n|}',

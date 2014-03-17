@@ -49,9 +49,14 @@ function createTag(tagName, attributes, textContent, opts) {
 	}
 	return '<' + tagName.toLowerCase() + // open tag
 		(Object.keys(attributes).length ? _.reduce(attributes, function(attrs, val, name){
-			return attrs + ' ' + name + '=' + JSON.stringify(val);
+			return attrs + ' ' + name + '=' + JSON.stringify(val.toString());
 		}, '') : '') + (opts.selfClose ? ' />' : '>' + // attributes
-			(opts.escape ? _.escape(textContent) : textContent).trim() + // content
+			(opts.escape ? _.escape(textContent) : textContent).toString().trim() + // content
 			'</' + tagName.toLowerCase() + '>');
 }
 exports.createTag = createTag;
+
+
+exports.classes = function(classList) {
+	return _.uniq(_.compact(classList)).join(' ');
+};
