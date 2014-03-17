@@ -1,4 +1,7 @@
-var _ = require('underscore'), extend = require('extend'); // _.extend doesn't support deep
+var _      = require('underscore'),
+	html   = require('./html'),
+	titles = require('./titles'),
+	links  = require('./links');
 
 module.exports = exports = function(text, opts) { // setting exports because it will be easier
 	var parsed = preParse(text, opts);
@@ -12,7 +15,7 @@ module.exports = exports = function(text, opts) { // setting exports because it 
 };
 
 exports.samples = [
-	"== Talk Page ==\nmain\n:my ''reply'' ~~~~",
+	"== Talk Page ==\nmain\n:my ''reply'' with a [[link]] ~~~~",
 	'[[/|homepage]] and [http://google.com Google]',
 	'<div class="class">stuff</div>',
 	'<nowiki allow="sign">[[link target|title]]\nsign: ~~~~\nescape markup: <nowiki>markup</nowiki></nowiki>',
@@ -29,28 +32,8 @@ var defaults = exports.defaults = {
 	author: 'User'
 };
 
-var links = exports.links = {
-	namespaces: {
-		'': _.identity, // main namespace
-		wikipedia: function(target){
-			return {
-				target: 'https://en.wikipedia.org/wiki/' + target,
-				external: true
-			};
-		}
-	},
-	fallback: _.identity
-}
-
 var tags = exports.tags = {};
 var nowikiTags = exports.nowikiTags = ['nowiki', 'nomarkup'];
-
-var linkRegex = exports.linkRegex = new RegExp(
-	'\\[\\[' + // open
-	'([^\\[\\]{}<>\\|]+)' + // not bad link targets - containing brackets, braces, <>, or pipe
-	'(\\|[^\\[\\]{}\\|]*)?' + // optional acceptable link text - start with pipe; not brackets, braces, pipe; possible empty text
-	'\\]\\]' // close
-	, 'g');
 
 
 // Parse a block of pre-parsed wikitext
@@ -61,13 +44,12 @@ function parser(text, opts) {
 		if (i % 2) { // inside of <nowiki>
 			return line;
 		} else {
-			return extractHeaders(
-				line.replace(/'''([^''']+)'''/g, createTag('strong', {}, '$1')). // bold
-				replace(/''([^'']+)''/g, createTag('em', {}, '$1')).
-				replace(linkRegex, link)
-			).map(function(head){ // create headers
+			return extractHeaders(links.replaceLinks( // create links
+				line.replace(/'''([^''']+)'''/g, html.createTag('strong', {}, '$1')). // bold
+				replace(/''([^'']+)''/g, html.createTag('em', {}, '$1'))
+			)).map(function(head){ // create headers
 				if (head.level) {
-					return createTag('h' + head.level, opts.headerHTML, head.name);
+					return html.createTag('h' + head.level, opts.headerHTML, head.name);
 				} else {
 					return head.text;
 				}
@@ -87,7 +69,7 @@ function preParse(text, opts) {
 		throw new TypeError('not a string passed to preParse()');
 	}
 
-	return extractTags(text, nowikiTags).map(function(t, i){ // text is now of the format [outside <nowiki>, inside <nowiki>, etc]
+	return html.extractTags(text, nowikiTags).map(function(t, i){ // text is now of the format [outside <nowiki>, inside <nowiki>, etc]
 		// replace sigs outside of <nowiki> blocks
 		return i % 2 ? t : t.replace(/~{3,5}/g, function s(sig){ // replace sigs
 			return sig.length === 3 ? sign(opts) : sig.length === 5 ? (new Date).toUTCString() : s('~~~') + ' ' + s('~~~~~');
@@ -96,46 +78,9 @@ function preParse(text, opts) {
 }
 
 
-// Return an array where odd keys are outside the tag and even are inside
-function extractTags(text, tag) {
-	if (_.isString(tag)) {
-		var openTag = '<' + tag + '[^>]*>',
-			closeTag = '<\/' + tag + '>',
-			split = text.split(new RegExp('(' + openTag + '|' + closeTag + ')')),
-			open = 0,
-			ret = [];
-		split.forEach(function(t, i){
-			if (t.match(openTag)) {
-				open++;
-			}
-			if (t.match(closeTag)) {
-				open--;
-			}
-			if (open == 0 && !t.match(closeTag)) {
-				ret.push(t);
-				if (i != split.length -1) {
-					ret.push('');
-				}
-			} else {
-				ret[ret.length - 1] += t;
-			}
-		});
-		return ret;
-	} else if (_.isArray(tag)) {
-		return tag.reduce(function(text, tag){
-			return _.flatten(text.map(function(t, i){
-				return i % 2 ? t : extractTags(t, tag);
-			}));
-		}, [text]);
-	} else {
-		return text;
-	}
-}
-exports.extractTags = extractTags;
-
 function extractHeaders(text) {
 	function htmlHeaders(text) {
-		return extractTags(text, ['h1','h2','h3','h4','h5','h6']).map(function(line, i){
+		return html.extractTags(text, ['h1','h2','h3','h4','h5','h6']).map(function(line, i){
 			if (i % 2) { // is a header
 				var count = line.match(/<\/h(\d)>$/);
 				return {
@@ -187,43 +132,7 @@ sign.def = function(name) {
 exports.sign = sign;
 
 
-// generate HTML for a tag
-function createTag(tagName, attributes, textContent, opts) {
-	if (!_.isObject(attributes)) {
-		attributes = {};
-	}
-	if (!_.isObject(opts)) {
-		opts = {};
-	}
-	return '<' + tagName.toLowerCase() + // open tag
-		(Object.keys(attributes).length ? _.reduce(attributes, function(attrs, val, name){
-			return attrs + ' ' + name + '=' + JSON.stringify(val);
-		}, '') : '') + (opts.selfClose ? ' />' : '>' + // attributes
-			(opts.escape ? _.escape(textContent) : textContent).trim() + // content
-			'</' + tagName.toLowerCase() + '>');
-}
-exports.createTag = createTag;
 
-
-function link(match, target, text) {
-	return createTag('a', {href: findLink(target)}, (text ? text.length == 1 ? pipetrick(target) : text.slice(1) : target).trim());
-}
-
-
-function findLink(target) {
-	return target;
-}
-
-
-function pipetrick(target) {
-	if (_.contains(target, ':')) {
-		target = target.match(/([^\:]*)\:?(.*)/)[2];
-	}
-
-	function stripParens(target) {
-		var parens = target.match(/(.*)\s+\([^\)]*\)$/); // strip final parens
-		return parens ? stripParens(parens[1]) : target;
-	}
-	return stripParens(target);
-}
-exports.pipetrick = pipetrick;
+exports.html = html;
+exports.titles = titles;
+exports.links = links;
