@@ -1,0 +1,8 @@
+{
+	"name": "wiki-parser",
+	"version": "0.0.1",
+	"dependencies": {
+		"underscore": "",
+		"extend": ""
+	}
+}
