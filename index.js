@@ -10,7 +10,8 @@ module.exports = exports = function(text, opts) { // setting exports because it 
 		parse: function(){
 			return parser(parsed, opts);
 		},
-		preParsed: parsed
+		preParsed: parsed,
+		orig: text
 	};
 };
 
@@ -29,7 +30,7 @@ exports.samples = [
 
 var defaults = exports.defaults = {
 	page: 'Page',
-	author: 'User'
+	user: 'User'
 };
 
 var tags = exports.tags = {};
@@ -38,7 +39,7 @@ var nowikiTags = exports.nowikiTags = ['nowiki', 'nomarkup'];
 
 // Parse a block of pre-parsed wikitext
 function parser(text, opts) {
-	opts = _.extend({}, defaults, opts);
+	opts = _.defaults(opts || {}, defaults);
 
 	return text.map(function(line, i){
 		if (i % 2) { // inside of <nowiki>
@@ -63,7 +64,7 @@ function parser(text, opts) {
 // Preparse a block of wikitext
 // Return a function to fully parse it
 function preParse(text, opts) {
-	opts = _.extend({}, defaults, opts);
+	opts = _.defaults(opts || {}, defaults);
 
 	if (!_.isString(text)) {
 		throw new TypeError('not a string passed to preParse()');
@@ -111,7 +112,6 @@ function extractHeaders(text) {
 		}
 	}));
 }
-exports.extractHeaders = extractHeaders;
 
 
 // create a signature
@@ -119,8 +119,8 @@ function sign(opts) {
 	if ('signature' in opts) {
 		return opts.signature;
 	}
-	if ('author' in opts) {
-		return sign.def(opts.author);
+	if ('user' in opts) {
+		return sign.def(opts.user);
 	}
 	return '~~~~';
 }
@@ -133,6 +133,6 @@ exports.sign = sign;
 
 
 
-exports.html = html;
+//exports.html = html;
 exports.titles = titles;
-exports.links = links;
+exports.links = links.exports;
