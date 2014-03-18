@@ -28,7 +28,9 @@ exports.samples = [
 	'<nowiki allow="sign">[[link target|title]]\nsign: ~~~~\nescape markup: <nowiki>markup</nomarkup></nowiki>',
 	'*1\n*2\n**2.1\n**2.2\n*3',
 	'#a\n#b\n##ba\n##bb\n#c',
-	'*1\n**2\n* 3\n*#4\n# 5\n##6\n#*7'
+	'*1\n**2\n* 3\n*#4\n# 5\n##6\n#*7',
+	':ding ding ; dong\n:ding ding\n;dong',
+	'*1\n**2\n* 3\n*#4\n# 5\n##6\n#*7\n\n pre\n more pre\n * well?\n * and?\n * \'\'\'bold\'\'\'\n\n:ding ding ; dong\n:ding ding\n;dong\n\n[[link name and text]]\n[[link loc|text]]\n[[link loc|{{{1}}}]]\n[[{{{1|1}}}|{{{2}}}]]\n[[{{{1}}}|{{{2}}}]]\n[[{{{1}}}]]\n[[{{{1|1}}}]]\n[[{{{1}}} 2]]\n[[{{{1|1}}} 2]]\n[[link|{{smile}}]]\n\n[[link]]]\n[[]link]]\n\n[[plain|]]\n[[ns:link|]]\n[[link (paren)|]]\n[[link (p1) (p2)|]]\n[[link (p1) more|]]\n[[ns:ns2:link|]]\n\n==lvl2==\n\n pre\n\n*abc\n *abc\n\n ===lvl3===\n'
 ];
 
 var defaults = exports.defaults = {
@@ -55,11 +57,11 @@ function parser(text, opts) {
 				if (head.level) { // a header
 					return html.createTag('h' + head.level, opts.headerHTML, head.name);
 				} else { // do start-of-line stuff (lists, pre)
-					return head.text;
+					return lists(head.text).join('');
 				}
 			}).join('');
 		}
-	}).join('');
+	}).join('').trim();
 }
 
 // Preparse a block of wikitext
@@ -91,11 +93,7 @@ function extractHeaders(text) {
 					text: line
 				};
 			} else {
-				return {
-					level: 0,
-					name: null,
-					text: line
-				};
+				return line;
 			}
 		});
 	}
@@ -111,8 +109,21 @@ function extractHeaders(text) {
 		} else {
 			return htmlHeaders(line);
 		}
-	}));
+	})).reduce(function(memo, line){
+		if (_.isString(line) && _.isString(_.last(memo))) {
+			return _.initial(memo).concat(_.last(memo) + '\n' + line);
+		} else {
+			return memo.concat(line);
+		}
+	}, []).map(function(line){
+		return _.isString(line) ? {
+			level: 0,
+			name: null,
+			text: line
+		} : line;
+	});
 }
+exports.extractHeaders = extractHeaders;
 
 
 // create a signature
@@ -195,11 +206,11 @@ function lists(text) {
 			ret = up(crop(start[1], prefix)) + start[2];
 		} else { // down, then up
 			tmp = diff(prefix, start[1]);
-			ret = down(tmp[0].split('')) + up(tmp[1].split('')) + start[2];
+			ret = (down(tmp[0].split('')) + up(tmp[1].split('')) + start[2]).replace(/<\/dl><dl>/g,''); // so that :; remain in same <dl>
 		}
 		prefix = start[1];
 		return ret;
-	}).join('');
+	});
 }
 exports.lists = lists;
 
