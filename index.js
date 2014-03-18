@@ -57,7 +57,7 @@ function parser(text, opts) {
 				if (head.level) { // a header
 					return html.createTag('h' + head.level, opts.headerHTML, head.name);
 				} else { // do start-of-line stuff (lists, pre)
-					return lists(head.text).join('');
+					return lists(monospace(head.text)).join('');
 				}
 			}).join('');
 		}
@@ -123,7 +123,6 @@ function extractHeaders(text) {
 		} : line;
 	});
 }
-exports.extractHeaders = extractHeaders;
 
 
 // create a signature
@@ -194,6 +193,9 @@ function lists(text) {
 
 	return (_.isArray(text) ? text : text.toString().split('\n')).concat('').map(function(line){
 		var start = line.match(/^([\*#\:;]*)\s*(.*)$/), ret = line, tmp;
+		if (!start) {
+			return line;
+		}
 		if (prefix == start[1]) { // same as last time
 			if (prefix) {
 				ret = '</' + itemTag(start[1]) + '><' + itemTag(start[1]) + '>' + start[2];
@@ -213,6 +215,26 @@ function lists(text) {
 	});
 }
 exports.lists = lists;
+
+
+function monospace(text) { // create <pre> tags
+	return (_.isArray(text) ? text : text.toString().split('\n')).concat('').reduce(function(memo, line){
+		if (line[0] == ' ' && (_.last(memo) || '')[0] == ' ') {
+			return _.initial(memo).concat(_.last(memo) + '\n' + line);
+		} else {
+			return memo.concat(line);
+		}
+	}, []).map(function(line){
+		if (line[0] == ' ') {
+			return html.createTag('pre', {}, line.split('\n').map(function(l){
+				return l.slice(1);
+			}).join('\n'));
+		} else {
+			return line;
+		}
+	});
+}
+exports.monospace = monospace;
 
 
 //exports.html = html;
