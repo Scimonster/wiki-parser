@@ -1,7 +1,8 @@
 var _      = require('underscore'),
 	html   = require('./html'),
 	titles = require('./titles'),
-	links  = require('./links');
+	links  = require('./links'),
+	tables = require('./tables');
 
 module.exports = exports = function(text, opts) { // setting exports because it will be easier
 	var parsed = preParse(text, opts);
@@ -31,7 +32,7 @@ exports.samples = [
 	'*1\n**2\n* 3\n*#4\n# 5\n##6\n#*7',
 	':ding ding ; dong\n:ding ding\n;dong',
 	'*1\n**2\n* 3\n*#4\n# 5\n##6\n#*7\n\n pre\n more pre\n * well?\n * and?\n * \'\'\'bold\'\'\'\n\n:ding ding ; dong\n:ding ding\n;dong\n\n[[link name and text]]\n[[link loc|text]]\n[[link loc|{{{1}}}]]\n[[{{{1|1}}}|{{{2}}}]]\n[[{{{1}}}|{{{2}}}]]\n[[{{{1}}}]]\n[[{{{1|1}}}]]\n[[{{{1}}} 2]]\n[[{{{1|1}}} 2]]\n[[link|{{smile}}]]\n\n[[link]]]\n[[]link]]\n\n[[plain|]]\n[[ns:link|]]\n[[link (paren)|]]\n[[link (p1) (p2)|]]\n[[link (p1) more|]]\n[[ns:ns2:link|]]\n\n==lvl2==\n\n pre\n\n*abc\n *abc\n\n ===lvl3===\n'
-];
+].concat(tables.samples);
 
 var defaults = exports.defaults = {
 	page: 'Page',
@@ -57,7 +58,7 @@ function parser(text, opts) {
 				if (head.level) { // a header
 					return html.createTag('h' + head.level, opts.headerHTML, head.name);
 				} else { // do start-of-line stuff (lists, pre)
-					return lists(monospace(head.text)).join('');
+					return lists(monospace(tables.parse(head.text))).join('');
 				}
 			}).join('');
 		}

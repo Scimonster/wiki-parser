@@ -60,3 +60,10 @@ exports.createTag = createTag;
 exports.classes = function(classList) {
 	return _.uniq(_.compact(classList)).join(' ');
 };
+
+
+exports.extractAttrs = function(attrs) {
+	return attrs.trim() ? _.object(attrs.match(/[a-z]+\="[^"]*"/ig).map(function(attr){
+		return _.rest(attr.match(/([a-z]+)\="([^"]*)"/i));
+	})) : {};
+};
