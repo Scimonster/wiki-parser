@@ -52,7 +52,7 @@ function parser(text, opts) {
 		} else {
 			return extractHeaders(links.replaceLinks( // create links
 				line.replace(/'''([^''']+)'''/g, html.createTag('strong', {}, '$1')). // bold
-				replace(/''([^'']+)''/g, html.createTag('em', {}, '$1'))
+				replace(/''([^'']+)''/g, html.createTag('em', {}, '$1')) // italics
 			)).map(function(head){ // create headers
 				if (head.level) { // a header
 					return html.createTag('h' + head.level, opts.headerHTML, head.name);
